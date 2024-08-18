@@ -1,0 +1,65 @@
+﻿# version: '3.4'
+
+networks:
+  keycloak_network:
+    driver: bridge
+
+services:
+  nzwalks.api:
+    # build docker success trước rồi lấy image_name ở trong terminal bỏ vào đây cũng đc, 
+    # vd: docker.io/library/nzwalks_api:v1  , ${DOCKER_REGISTRY-}nzwalksapi 
+    image: ${DOCKER_REGISTRY-}nzwalksapi:dev
+    depends_on: 
+     - "nzwalks.database"
+    container_name: nzwalks.api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8080" # Http
+      # - "8081:8081" # Https
+    environment:
+      #- "ConnectionStrings__NZWalksConnectionStringPosgresSQL=User ID=postgres;Server=nzwalks.database;Port=5432;Database=NZWalksDb;Username=postgres;Password=1234567890"
+      - "ASPNETCORE_URLS=http://+:8080"
+      - "server=nzwalks.database" 
+      - "database=NZWalksDb" 
+      - "port=5432" 
+      - "password=1234567890" 
+      - "dbUser=postgres" 
+    networks:
+      - keycloak_network
+  
+
+  nzwalks.database:
+     image: postgres:latest
+     container_name: nzwalks.database
+     environment:
+        - POSTGRES_DB=NZWalksDb
+        - POSTGRES_USER=postgres
+        - POSTGRES_PASSWORD=1234567890
+     ports:
+        - "5432:5432" 
+     restart: always
+     volumes:
+        - postgres_data:/var/lib/postgresql/data
+     networks:
+      - keycloak_network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.2
+    container_name: keycloak_2
+    environment:
+      - KEYCLOAK_USER=admin
+      - KEYCLOAK_PASSWORD=admin
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+    ports:
+      - "8080:8080" # Thay đổi cổng nếu cần
+    networks:
+      - keycloak_network
+    command:
+      - start-dev
+
+volumes:
+  postgres_data:    
+  
